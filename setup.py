@@ -1667,6 +1667,7 @@ def glob_paths(*patterns, excludes=('.pyc', )):
 
 # -----------------------------------------------------------------------------
 # setup !
+
 if not build_examples:
     setup(
         name='Kivy',
