@@ -14,7 +14,7 @@ from os.path import join, exists
 from os import getcwd
 from collections import defaultdict
 
-from kivy.core import core_select_lib
+from kivy.core import core_select_lib, get_provider_modules, make_provider_tuple
 from kivy.clock import Clock
 from kivy.config import Config
 from kivy.logger import Logger
@@ -24,7 +24,7 @@ from kivy.event import EventDispatcher
 from kivy.properties import ListProperty, ObjectProperty, AliasProperty, \
     NumericProperty, OptionProperty, StringProperty, BooleanProperty, \
     ColorProperty
-from kivy.utils import platform, reify, deprecated, pi_version
+from kivy.utils import platform, pi_version
 from kivy.context import get_current_context
 from kivy.uix.behaviors import FocusBehavior
 from kivy.setupconfig import USE_SDL3
@@ -1033,9 +1033,8 @@ class WindowBase(EventDispatcher):
 
     .. versionadded:: 2.1.0
 
-    .. warning::
-        This is an experimental property and it remains so while this warning
-        is present.
+    .. versionchanged:: 3.0.0
+        Removed "Experimental" warning.
     '''
 
     event_managers_dict = None
@@ -1050,9 +1049,8 @@ class WindowBase(EventDispatcher):
 
     .. versionadded:: 2.1.0
 
-    .. warning::
-        This is an experimental property and it remains so while this warning
-        is present.
+    .. versionchanged:: 3.0.0
+        Removed "Experimental" warning.
     '''
 
     trigger_create_window = None
@@ -1064,7 +1062,7 @@ class WindowBase(EventDispatcher):
         'on_touch_move', 'on_touch_up', 'on_mouse_down',
         'on_mouse_move', 'on_mouse_up', 'on_keyboard', 'on_key_down',
         'on_key_up', 'on_textinput', 'on_drop_begin', 'on_drop_file',
-        'on_dropfile', 'on_drop_text', 'on_drop_end', 'on_request_close',
+        'on_drop_text', 'on_drop_end', 'on_request_close',
         'on_cursor_enter', 'on_cursor_leave', 'on_joy_axis',
         'on_joy_hat', 'on_joy_ball', 'on_joy_button_down',
         'on_joy_button_up', 'on_memorywarning', 'on_textedit',
@@ -1150,10 +1148,6 @@ class WindowBase(EventDispatcher):
         if 'shape_image' not in kwargs:
             kwargs['shape_image'] = Config.get('kivy', 'window_shape')
 
-        self.fbind(
-            'on_drop_file',
-            lambda win, filename, *args: win.dispatch('on_dropfile', filename)
-        )
         super(WindowBase, self).__init__(**kwargs)
 
         # bind all the properties that need to recreate the window
@@ -1231,10 +1225,8 @@ class WindowBase(EventDispatcher):
 
         .. versionadded:: 2.1.0
 
-        .. warning::
-            This is an experimental method and it remains so until this warning
-            is present as it can be changed or removed in the next versions of
-            Kivy.
+        .. versionchanged:: 3.0.0
+            Removed "Experimental" warning.
         '''
         self.event_managers.insert(0, manager)
         for type_id in manager.type_ids:
@@ -1248,10 +1240,8 @@ class WindowBase(EventDispatcher):
 
         .. versionadded:: 2.1.0
 
-        .. warning::
-            This is an experimental method and it remains so until this warning
-            is present as it can be changed or removed in the next versions of
-            Kivy.
+        .. versionchanged:: 3.0.0
+            Removed "Experimental" warning.
         '''
         self.event_managers.remove(manager)
         for type_id in manager.type_ids:
@@ -2166,12 +2156,6 @@ class WindowBase(EventDispatcher):
         '''
         pass
 
-    @deprecated(msg='Deprecated in 2.1.0, use on_drop_file event instead. '
-                    'Event on_dropfile will be removed in the next two '
-                    'releases.')
-    def on_dropfile(self, filename):
-        pass
-
     def on_drop_text(self, text, x, y, *args):
         '''Event called when a text is dropped on the application.
 
@@ -2591,12 +2575,15 @@ class WindowBase(EventDispatcher):
 
 
 #: Instance of a :class:`WindowBase` implementation
+# Build platform-specific list from registry
+all_providers = get_provider_modules('window')
 window_impl = []
-if platform == 'linux' and (pi_version or 4) < 4:
-    window_impl += [('egl_rpi', 'window_egl_rpi', 'WindowEglRpi')]
-if USE_SDL3:
-    window_impl += [('sdl3', 'window_sdl3', 'WindowSDL')]
 
+if platform == 'linux' and (pi_version or 4) < 4:
+    window_impl.append(make_provider_tuple('egl_rpi', all_providers, 'WindowEglRpi'))
+if USE_SDL3:
+    window_impl.append(make_provider_tuple('sdl3', all_providers, 'WindowSDL'))
 if platform == 'linux':
-    window_impl += [('x11', 'window_x11', 'WindowX11')]
+    window_impl.append(make_provider_tuple('x11', all_providers, 'WindowX11'))
+
 Window: WindowBase = core_select_lib('window', window_impl, True)

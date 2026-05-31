@@ -9,8 +9,13 @@ __all__ = ('LabelSDL3', )
 
 from kivy.core.text import LabelBase
 try:
-    from kivy.core.text._text_sdl3 import (_SurfaceContainer, _get_extents,
-                                           _get_fontdescent, _get_fontascent)
+    from kivy.core.text._text_sdl3 import (
+        _SurfaceContainer,
+        _get_extents,
+        _get_tight_extents,
+        _get_fontdescent,
+        _get_fontascent,
+    )
 except ImportError:
     from kivy.core import handle_win_lib_import_error
     handle_win_lib_import_error(
@@ -19,6 +24,11 @@ except ImportError:
 
 
 class LabelSDL3(LabelBase):
+    _provider_name = 'sdl3'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._baseline_offset = 0
 
     def _get_font_id(self):
         return '|'.join([str(self.options[x]) for x
@@ -26,7 +36,10 @@ class LabelSDL3(LabelBase):
                 'italic', 'underline', 'strikethrough')])
 
     def get_extents(self, text):
-        return _get_extents(self, text)
+        if self.options['limit_render_to_text_bbox']:
+            return _get_tight_extents(self, text)
+        else:
+            return _get_extents(self, text)
 
     def get_descent(self):
         return _get_fontdescent(self)
@@ -38,7 +51,14 @@ class LabelSDL3(LabelBase):
         self._surface = _SurfaceContainer(self._size[0], self._size[1])
 
     def _render_text(self, text, x, y):
+        if self.options['limit_render_to_text_bbox']:
+            y-= self._baseline_offset
+
         self._surface.render(self, text, x, y)
 
     def _render_end(self):
         return self._surface.get_data()
+
+
+# Register with the text provider system
+LabelBase.register_provider(LabelSDL3)

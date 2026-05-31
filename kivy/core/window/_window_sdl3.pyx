@@ -161,7 +161,10 @@ cdef class _WindowSDL3Storage:
         SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8)
         SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8)
         SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8)
-        SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, KIVY_SDL_GL_ALPHA_SIZE)
+
+        config_alpha_size = Config.getint('graphics', 'alpha_size')
+        SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, config_alpha_size)
+
         SDL_GL_SetAttribute(SDL_GL_RETAINED_BACKING, 0)
         SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1)
 
@@ -826,6 +829,9 @@ cdef class _WindowSDL3Storage:
     def is_keyboard_shown(self):
         return SDL_TextInputActive(self.win)
 
+    def get_current_key_modifiers(self):
+        return SDL_GetModState()
+
     def wait_event(self):
         with nogil:
             SDL_WaitEvent(NULL)
@@ -965,11 +971,9 @@ cdef class _WindowSDL3Storage:
             s = event.edit.text.decode('utf-8')
             return ('textedit', s)
         elif event.type == SDL_EVENT_DROP_FILE:
-            # return ('dropfile', event.drop.file)
-            pass
+            return ('dropfile', event.drop.data)
         elif event.type == SDL_EVENT_DROP_TEXT:
-            # return ('droptext', event.drop.file)
-            pass
+            return ('droptext', event.drop.data)
         elif event.type == SDL_EVENT_DROP_BEGIN:
             return ('dropbegin',)
         elif event.type == SDL_EVENT_DROP_COMPLETE:

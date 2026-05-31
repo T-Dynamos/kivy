@@ -324,6 +324,7 @@ class WindowSDL(WindowBase):
             self._set_minimum_size()
             self._set_allow_screensaver()
             self._set_always_on_top()
+            self._update_modifiers_state()
 
             if state == 'hidden':
                 self._focus = False
@@ -358,7 +359,7 @@ class WindowSDL(WindowBase):
                 filename_icon = resource_find(
                         join(kivy_data_dir, 'logo', filename_icon))
             self.set_icon(filename_icon)
-        except:
+        except Exception:
             Logger.exception('Window: cannot set icon')
 
     def _update_density(self):
@@ -502,7 +503,7 @@ class WindowSDL(WindowBase):
                 continue
 
             action, args = event[0], event[1:]
-            if action == 'quit':
+            if action in ('windowclose', 'quit'):
                 if self.dispatch('on_request_close'):
                     continue
                 EventLoop.quit = True
@@ -639,6 +640,7 @@ class WindowSDL(WindowBase):
 
             elif action == 'windowfocusgained':
                 self._focus = True
+                self._update_modifiers_state()
 
             elif action == 'windowfocuslost':
                 self._focus = False
@@ -777,7 +779,7 @@ class WindowSDL(WindowBase):
                 continue
 
             action, args = event[0], event[1:]
-            if action == 'quit':
+            if action in ('windowclose', 'quit'):
                 EventLoop.quit = True
                 break
             elif action == 'app_willenterforeground':
@@ -787,6 +789,10 @@ class WindowSDL(WindowBase):
 
         if app:
             app.dispatch('on_resume')
+
+    def _update_modifiers_state(self):
+        """Update modifiers state from current SDL state"""
+        self._update_modifiers(self._win.get_current_key_modifiers())
 
     def _update_modifiers(self, mods=None, key=None):
         if mods is None and key is None:

@@ -291,6 +291,10 @@ Available configuration tokens
         .. warning::
             For shaping to work reliably across platforms, set
             `Window.clearcolor` to `(0, 0, 0, 0)`.
+    `alpha_size: int (default: 0 on the Raspberry Pi and 8 on all other platforms)
+        Specifies the minimum number of bits for the alpha channel of the color buffer.
+        Set this to 0, so SDL3 works without X11.
+        Only applicable for the SDL3 window provider.
 
 :input:
 
@@ -352,6 +356,24 @@ Available configuration tokens
             Please use
             :class:`~kivy.uix.scrollview.ScrollView.effect_cls` instead.
 
+:svg:
+
+    `default_size`: int, defaults to 512
+        The minimum rasterization size (in pixels) used when loading SVG files
+        via the ThorVG image provider (``img_thorvg_svg``).
+
+        When an SVG file has no intrinsic width/height, it is rasterized at
+        this size. When the native size is smaller than this value, the image
+        is scaled up proportionally so that no dimension falls below
+        ``default_size``. This prevents blurry upscaling when an SVG icon is
+        displayed larger than its declared size.
+
+        To override for a specific image, use the URI syntax::
+
+            Image(source='@image_provider:thorvg_svg[size=256](icon.svg)')
+
+        .. versionadded:: 3.0.0
+
 :modules:
 
     You can activate modules with this syntax::
@@ -361,6 +383,10 @@ Available configuration tokens
     Anything after the = will be passed to the module as arguments.
     Check the specific module's documentation for a list of accepted
     arguments.
+
+.. versionadded:: 3.0.0
+    `alpha_size` have been added to the `graphics` section.
+    The `svg` section has been added with the ``default_size`` option.
 
 .. versionadded:: 2.2.0
     `always_on_top` have been added to the `graphics` section.
@@ -420,12 +446,12 @@ from weakref import ref
 
 from kivy import kivy_config_fn
 from kivy.logger import Logger, logger_config_update
-from kivy.utils import platform
+from kivy.utils import pi_version, platform
 
 _is_rpi = exists('/opt/vc/include/bcm_host.h')
 
 # Version number of current configuration format
-KIVY_CONFIG_VERSION = 28
+KIVY_CONFIG_VERSION = 29
 
 Config = None
 '''The default Kivy configuration object. This is a :class:`ConfigParser`
@@ -775,6 +801,7 @@ if not environ.get('KIVY_DOC_INCLUDE'):
     Config.adddefaultsection('widgets')
     Config.adddefaultsection('modules')
     Config.adddefaultsection('network')
+    Config.adddefaultsection('svg')
 
     # Upgrade default configuration until we have the current version
     need_save = False
@@ -961,6 +988,12 @@ if not environ.get('KIVY_DOC_INCLUDE'):
         elif version == 27:
             if Config.get("kivy", "window_shape") == "data/images/defaultshape.png":
                 Config.set("kivy", "window_shape", "")
+
+        elif version == 28:
+            Config.setdefault(
+                "graphics", "alpha_size", "8" if pi_version is None else "0"
+            )
+            Config.setdefault('svg', 'default_size', '512')
 
         # WARNING: When adding a new version migration here,
         # don't forget to increment KIVY_CONFIG_VERSION !

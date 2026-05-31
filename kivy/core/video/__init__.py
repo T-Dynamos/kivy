@@ -21,7 +21,7 @@ Core class for reading video files and managing the video
 __all__ = ('VideoBase', 'Video')
 
 from kivy.clock import Clock
-from kivy.core import core_select_lib
+from kivy.core import core_select_lib, get_provider_modules, make_provider_tuple
 from kivy.event import EventDispatcher
 from kivy.logger import Logger
 
@@ -64,6 +64,7 @@ class VideoBase(EventDispatcher):
         kwargs.setdefault('eos', 'stop')
         kwargs.setdefault('async', True)
         kwargs.setdefault('autoplay', False)
+        kwargs.setdefault('fps', 30)
 
         super(VideoBase, self).__init__()
 
@@ -77,12 +78,13 @@ class VideoBase(EventDispatcher):
         self._autoplay = kwargs.get('autoplay')
         self._async = kwargs.get('async')
         self.eos = kwargs.get('eos')
+        self._fps = kwargs.get('fps')
         if self.eos == 'pause':
             Logger.warning("'pause' is deprecated. Use 'stop' instead.")
             self.eos = 'stop'
         self.filename = kwargs.get('filename')
 
-        Clock.schedule_interval(self._update, 1 / 30.)
+        Clock.schedule_interval(self._update, 1 / self._fps)
 
         if self._autoplay:
             self.play()
@@ -203,16 +205,20 @@ class VideoBase(EventDispatcher):
 
 
 # Load the appropriate provider
+# Build platform-specific list from registry
+all_providers = get_provider_modules('video')
 video_providers = []
+
 try:
     from kivy.lib.gstplayer import GstPlayer  # NOQA
-    video_providers += [('gstplayer', 'video_gstplayer', 'VideoGstplayer')]
+    video_providers.append(make_provider_tuple(
+        'gstplayer', all_providers, 'VideoGstplayer'
+    ))
 except ImportError:
     pass
-video_providers += [
-    ('ffmpeg', 'video_ffmpeg', 'VideoFFMpeg'),
-    ('ffpyplayer', 'video_ffpyplayer', 'VideoFFPy'),
-    ('null', 'video_null', 'VideoNull')]
 
+video_providers.append(make_provider_tuple('ffmpeg', all_providers, 'VideoFFMpeg'))
+video_providers.append(make_provider_tuple('ffpyplayer', all_providers, 'VideoFFPy'))
+video_providers.append(make_provider_tuple('null', all_providers, 'VideoNull'))
 
 Video: VideoBase = core_select_lib('video', video_providers)
