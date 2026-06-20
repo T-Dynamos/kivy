@@ -1172,7 +1172,7 @@ def determine_sdl3():
     if not sdl3_paths:
         # Try to find sdl3 in default locations if we don't have a custom path
         sdl3_paths = []
-        for include in includes + [join(sys.prefix, 'include')]:
+        for include in includes + [join('/usr', 'include')]:
             for _sdl_sub in ['SDL3', 'SDL3_image', 'SDL3_mixer', 'SDL3_ttf']:
                 sdl_inc = join(include, _sdl_sub)
                 if isdir(sdl_inc):
